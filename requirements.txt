@@ -1,4 +1,4 @@
-mail-parser
-tornado
-peewee
-aiosmtpd
+mail-parser==3.15.0
+tornado==6.4
+peewee==3.17.1
+aiosmtpd==1.4.5
