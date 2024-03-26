@@ -289,7 +289,7 @@ if __name__ == "__main__":
     #SmtpdHandler.domains.append(options.domain)
     SmtpdHandler.domains.extend(options.domain)
     #smtp = Controller(SmtpdHandler(), hostname="0.0.0.0",port=25)
-    smtp = Controller(SmtpdHandler(), hostname="127.0.0.1", port=25)
+    smtp = Controller(SmtpdHandler(), port=25)
     smtp.start()
 
     User.create_table()
