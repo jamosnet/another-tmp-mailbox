@@ -58,6 +58,33 @@
 	setIntervalImmed = function(func, interval) {
 		func(); return setInterval(func, interval)
 	}
+
+      $customShortId = $('#customShortid');
+      $shortId = $('#address');
+      $customTheme = 'check';
+      $placeholder_old = '请等待分配临时邮箱';
+      $placeholder_new = '请输入不带后缀邮箱账号';
+      $customShortId.on('click',function() {
+        $shortId.parent().removeClass('copyable'); //禁用复制功能才能输入
+        var self = $(this);
+        var editEnable = true;
+        $shortId.prop('disabled', false);
+        if(self.hasClass('edit')) {
+          $shortId.val('');
+          self.removeClass('edit');
+          self.toggleClass($customTheme);
+          $shortId.prop('placeholder', $placeholder_new);
+        } else {
+          $shortId.prop('disabled', true);
+          self.removeClass('check');
+          self.toggleClass('edit');
+          $shortId.prop('placeholder',$placeholder_old);
+          document.cookie = "uuid=" + $shortId.val() + "; path=/";
+          window.location.reload();
+        }
+      });
+
+
 	$("#releaseAddress")[0].onclick  = function() {
 		$.ajax({
 		        type: "DELETE",
@@ -111,7 +138,7 @@
                                                 console.log(msg)
                                         }
                                 })
-                        }, 1.678*1000)
+                        }, 8.678*1000)
 			setInterval(function() {
         			$.ajax({
                 			type: "POST",
