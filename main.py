@@ -288,8 +288,12 @@ if __name__ == "__main__":
 
     #SmtpdHandler.domains.append(options.domain)
     SmtpdHandler.domains.extend(options.domain)
-    #smtp = Controller(SmtpdHandler(), hostname="0.0.0.0",port=25)
-    smtp = Controller(SmtpdHandler(), port=25)
+    if '\\' in os.environ.get('PATH'):
+        # 在 Windows 操作系统上，使用 Controller 和 SmtpdHandler 并指定 hostname="0.0.0.0" 和 port=25 会导致错误。
+        # 这是因为在 Windows 上，非特权用户（非管理员）通常无法绑定到低于 1024 的端口（例如端口 25）。
+        smtp = Controller(SmtpdHandler(), hostname="127.0.0.1", port=25)
+    else:
+        smtp = Controller(SmtpdHandler(), hostname="0.0.0.0",port=25)
     smtp.start()
 
     User.create_table()
