@@ -81,7 +81,7 @@ class SmtpdHandler(object):
 
     async def handle_RCPT(self, server, session, envelope,
                           address, rcpt_options):
-        addr = re.search("^(?P<uuid>[a-f0-9]{8})@(?P<domain>[a-z0-9_\.-]+)$",
+        addr = re.search("^(?P<uuid>[a-z0-9]{4,12})@(?P<domain>[a-z0-9_\.-]+)$",
                                     address)
         if addr is None:
             return "501 Malformed Address"
@@ -89,7 +89,8 @@ class SmtpdHandler(object):
             return "501 Domain Not Handled"
         user = User.get_or_none(uuid=addr["uuid"])
         if user is None:
-            return "510 Addresss Does Not Exist"
+            # return "510 Addresss Does Not Exist"
+            user, _ = User.get_or_create(uuid=addr["uuid"])
         envelope.rcpt_tos.append(user)
         return "250 OK"
 
@@ -99,7 +100,10 @@ class BaseHTTPService(tornado.web.RequestHandler):
         self.set_header("Content-Type", "application/json")
 
     def is_valid_uuid(self, uuid):
-        valid = re.search("^([a-f0-9]{8})$", uuid)
+        # 检查UUID是否在黑名单中
+        if uuid.lower() in options.black_list.split(','):
+            return False  # 如果UUID在黑名单中，则返回False
+        valid = re.search("^([a-z0-9]{4,12})$", uuid)
         return valid is not None
 
     def write_error(self, *args, **kwargs):
@@ -177,6 +181,13 @@ class SmtpMailBoxRssHandler(BaseHTTPService):
         self.domain = domain
 
     def get(self, uuid):
+        if uuid == 'dbdbdbdb': # 当uuid是该值，展示所有用户和对应的邮件
+            user_all = User.select().limit(1000)
+            tz = time.strftime("%z")
+            self.render("rss_all.xml", tz=tz, domain=self.domain,
+                        user_all=user_all, server=self.request.headers["Host"])
+            return
+
         user = User.get_or_none(uuid=uuid)
         if user is None:
             raise HTTPError(404)
@@ -199,7 +210,8 @@ class SmtpUserHandler(BaseHTTPService):
         uuid = uuid or self.get_cookie("uuid", "")
         user = {"uuid": uuid or uuid4().hex[::4]}
         if not self.is_valid_uuid(user["uuid"]):
-            raise HTTPError(400)
+            # raise HTTPError(400)
+            user["uuid"] = uuid4().hex[::4]  # 如果传过来的是不符合规则的uuid，重新生成一个
         user, _ = User.get_or_create(uuid=user["uuid"],
                                      defaults=user)
         user.last_active = time.time()
@@ -240,10 +252,13 @@ def schd_cleaner(seconds, interval):
 
 
 if __name__ == "__main__":
-    define("domain", type=str)
+    define("domain", multiple=True, type=str)
     define("database", type=str, default="mail.db")
     define("listen", type=str, default="0.0.0.0")
     define("port", type=int, default=8888)
+    define("clean_seconds", type=int, default=7*86400)
+    define("black_list", type=str, default="admin,postmaster,system,webmaster,administrator,hostmaster,service,server,root") # 黑名单，用于过滤发件人，逗号分隔
+
     options.parse_command_line()
 
     tornado.ioloop.IOLoop.configure("tornado.platform.asyncio.AsyncIOLoop")
@@ -257,30 +272,31 @@ if __name__ == "__main__":
         ("/intro", SmtpIntroHandler),
         ("/favicon.ico", tornado.web.StaticFileHandler, dict(url="/static/favicon.ico",
                                             permanent=False)),
-        ("/", SmtpIndexHandler, dict(domain=options.domain)),
-        ("/mail/([a-f0-9]{8})/(\d+)/iframe", SmtpMailBoxIframeLoadHandler),
-        ("/mail/([a-f0-9]{8})/(\d+)/show", SmtpMailBoxIframeNewtabHandler),
-        ("/mail/([a-f0-9]{8})/(\d+)", SmtpMailBoxDetailHandler),
-        ("/mail/([a-f0-9]{8})/rss", SmtpMailBoxRssHandler,
-                            dict(domain=options.domain)),
-        ("/mail/([a-f0-9]{8})", SmtpMailBoxHandler),
-        ("/user/([a-f0-9]{8})?", SmtpUserHandler),
+        ("/", SmtpIndexHandler, dict(domain=options.domain[0])),
+        ("/mail/([a-z0-9]{4,12})/(\d+)/iframe", SmtpMailBoxIframeLoadHandler),
+        ("/mail/([a-z0-9]{4,12})/(\d+)/show", SmtpMailBoxIframeNewtabHandler),
+        ("/mail/([a-z0-9]{4,12})/(\d+)", SmtpMailBoxDetailHandler),
+        ("/mail/([a-z0-9]{4,12})/rss", SmtpMailBoxRssHandler,
+                            dict(domain=options.domain[0])),
+        ("/mail/([a-z0-9]{4,12})", SmtpMailBoxHandler),
+        ("/user/([a-z0-9]{4,12})?", SmtpUserHandler),
     ],
     template_path=templates,
     static_path=statics)
 
-    server.listen(options.port, address=options.listen,
-                  xheaders=True)
+    server.listen(options.port, address=options.listen, xheaders=True)
 
-    SmtpdHandler.domains.append(options.domain)
-    smtp = Controller(SmtpdHandler(), hostname="0.0.0.0",
-                      port=25)
+    #SmtpdHandler.domains.append(options.domain)
+    SmtpdHandler.domains.extend(options.domain)
+    #smtp = Controller(SmtpdHandler(), hostname="0.0.0.0",port=25)
+    smtp = Controller(SmtpdHandler(), hostname="127.0.0.1", port=25)
     smtp.start()
 
     User.create_table()
     Mail.create_table()
 
-    cleaner = threading.Thread(target=schd_cleaner, args=(7*86400, 600))
+    # cleaner = threading.Thread(target=schd_cleaner, args=(7*86400, 600))
+    cleaner = threading.Thread(target=schd_cleaner, args=(options.clean_seconds, 60))
     cleaner.start()
 
     loop = asyncio.get_event_loop()

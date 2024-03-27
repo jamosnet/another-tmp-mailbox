@@ -1,10 +1,26 @@
-> 简单来说这还是造轮子，但是是因为我用别人轮子遇到了麻烦，一难调试二文档不全，虽然就几行配置，但是我是真的佩服就几行配置都难倒了我。跑起来了是跑起来了，但是工作是真的不正常。这里的阅后即焚目前来说是相对的，你需要手动清理。
 
+
+感谢 [rev1si0n/another-tmp-mailbox](https://github.com/rev1si0n/another-tmp-mailbox) 用简短的代码实现了匿名邮箱最主要的功能，在此基础上做了一些点改动
+1. 支持多域名，python  main.py  --domain=aa.com,bb.com --clean_seconds=3600
+    > 特别说明一下， 1234@aa.com和1234@bb.com本程序是不做区分的，只认邮箱@前面的名称
+2. 支持接收任何收件人的邮件（邮箱不需要先创建）。有这样的场景，我们在注册一个网站时候需要用到邮箱，这时候可以直接胡编乱造一个，然后再来网站收取邮件。
+3. 支持自定义邮箱，规则是 ([a-z0-9]{4,12}
+4. 可以自定义邮件保留时间。
+5. docker run 部署
+    ```
+    # cd 到源码文件夹
+    $ docker build -t tmpmail .
+    # 等待结束，随后自行修改下方 yaml 中的 domain 及相关端口配置
+    docker run -it --rm -v /data/tmpmail:/tmpmail -p 25:25 -p 8080:8080 tmpmail python3 -u /usr/local/tmpmail/main.py -port=8080 -domain=example.com
+    ```
+6. 用python做了一个调用的Wrapper，方便集成到代码中
+
+[虚拟环境配置看这里venv.md](venv.md)
+
+----
 无需注册，独立邮箱地址，支持富文本的邮件（html），支持 RSS 订阅，自动刷新，可手动删除账号。
 
-好了我把链接贴上来 [denghongcai/forsaken-mail](https://github.com/denghongcai/forsaken-mail)，嗯就是它。
-前端是直接偷的上面那个项目稍作修改我真不会前端[┑(￣Д ￣)┍]。 后端源代码稳定后再放上来，也就不到两百行。
-
+ 
 ### 这是干嘛的
 
 当然我也得介绍这个东西到底是干什么的。比如你需要临时在一个网站注册账号，他需要你邮箱账号，这种情况下，我是不愿意使用我的真实邮箱去注册的，因为我不相信这个网站，其次我会尽量减少信息泄露的途径。又比如你在看xhz，要你注册账号才能下载，好了，用自己邮箱又是不太合适的地方。这时我一般会去找一些公开注册的网站新建一个邮箱。其实现成的服务挺多的，比如比较著名的 `yopmail` 就是一个类似的邮箱，你甚至不需要注册。
@@ -46,5 +62,7 @@ $ docker-compose -f docker-compose.yaml up -d
 
 ### 演示截图:
 ![或者查看项目里的 screenshot.png](screenshot.png)
+
+![或者查看项目里的 screenshot2.png](screenshot2.png)
 
 Enjoy~
