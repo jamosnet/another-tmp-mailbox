@@ -14,7 +14,12 @@
     # 等待结束，随后自行修改下方 yaml 中的 domain 及相关端口配置
     docker run -it --rm -v /data/tmpmail:/tmpmail -p 25:25 -p 8080:8080 tmpmail python3 -u /usr/local/tmpmail/main.py -port=8080 -domain=example.com
     ```
-6. 用python做了一个调用的Wrapper，方便集成到其他项目代码中
+6. 开箱即用方法
+    ```buildoutcfg
+    docker run -d --name tmpmail -p 25:25 -p 8380:8080 -v /etc/localtime:/etc/localtime:ro  -v /home/another-tmp-mailbox/data_tmpmail:/tmpmail:rw  -e TZ=Asia/Shanghai  life8688/tmpmail:2024.03.28   python3 -u /usr/local/tmpmail/main.py -port=8080 -domain=example.com --clean_seconds=3600
+    
+    ```
+7. 用python做了一个调用的Wrapper，方便集成到其他项目代码中
 
 [虚拟环境配置看这里venv.md](venv.md)
 
